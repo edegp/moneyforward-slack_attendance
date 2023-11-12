@@ -1,0 +1,43 @@
+{
+  "name": "Attendance-lambda-app",
+  "version": "1.0.0",
+  "main": "app.js",
+  "author": "edegp <a.yuhi1164@gmail.com>",
+  "license": "MIT",
+  "scripts": {
+    "dev": "serverless offline --noPrependStageInUrl --stage dev",
+    "local": "nodemon",
+    "deploy": "serverless deploy --stage prd",
+    "build": "esbuild --bundle app.ts --outfile=app.js --platform=node --target=node14 --minify --sourcemap --external:puppeteer-core --external:@sparticuz/chromium",
+    "lint": "npx prettier --write 'src/**/*.ts' && eslint --fix --ext .ts src"
+  },
+  "dependencies": {
+    "@aws-sdk/client-secrets-manager": "^3.449.0",
+    "@slack/bolt": "^3.14.0",
+    "dotenv": "^16.3.1",
+    "puppeteer-core": "21.4.0"
+  },
+  "devDependencies": {
+    "@sparticuz/chromium": "^118.0.0",
+    "@types/node": "^20.9.0",
+    "@typescript-eslint/eslint-plugin": "^6.10.0",
+    "@typescript-eslint/parser": "^6.10.0",
+    "esbuild": "^0.19.5",
+    "eslint-config-prettier": "^9.0.0",
+    "prettier": "^3.0.3",
+    "serverless-dotenv-plugin": "^6.0.0",
+    "serverless-esbuild": "^1.48.5",
+    "serverless-layers": "^2.7.0",
+    "serverless-offline": "^13.2.1",
+    "typescript": "^5.2.2"
+  },
+  "prettier": {
+    "semi": false,
+    "trailingComma": "none",
+    "tabWidth": 2,
+    "singleQuote": true,
+    "jsxBracketSameLine": false,
+    "printWidth": 100,
+    "arrowParens": "avoid"
+  }
+}

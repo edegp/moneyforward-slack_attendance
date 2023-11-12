@@ -1,0 +1,59 @@
+service: serverless-attendance-bot
+frameworkVersion: '3'
+useDotenv: true
+custom:
+  esbuild:
+    bundle: true
+    minify: false
+    sourcemap: true
+    exclude: ['@sparticuz/chromium']
+    target: 'node18'
+    define: { 'require.resolve': undefined }
+    platform: 'node'
+    concurrency: 10
+    packager: 'yarn'
+    watch:
+      pattern: ['**/*.ts'] # match only typescript files in src directory
+provider:
+  name: aws
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - 'secretsmanager:GetSecretValue'
+          Resource: 'arn:aws:secretsmanager:${aws:region}:${aws:accountId}:secret:${env:SECRET_NAME}-*'
+  stage: ${opt:stage, 'dev'}
+  runtime: nodejs18.x
+  region: ${opt:region, "ap-northeast-1"}
+  environment:
+    SLACK_SIGNING_SECRET: ${env:SLACK_SIGNING_SECRET}
+    SLACK_BOT_TOKEN: ${env:SLACK_BOT_TOKEN}
+    TARGET_CHANNEL_ID: ${env:TARGET_CHANNEL_ID}
+    SECRET_NAME: ${env:SECRET_NAME}
+    REGION: ${self:provider.region}
+    STAGE: ${self:provider.stage}
+  timeout: 30
+  memorySize: 2048
+functions:
+  slack:
+    handler: app.handler
+    layers:
+      - arn:aws:lambda:${aws:region}:764866452798:layer:chrome-aws-lambda:39
+    events:
+      - http:
+          path: slack/events
+          method: post
+plugins:
+  - serverless-esbuild
+  - serverless-dotenv-plugin
+  - serverless-offline
+package:
+  patterns:
+    - '!yarn*'
+    - '!.serverless/**'
+    - '!.vscode/**'
+    - '!.esbuild/**'
+    - '!node_modules/**'
+    - '!nodemon.json'
+    - '!eslintrc.json'
