@@ -1,19 +1,24 @@
+# "org" ensures this Service is used with the correct Serverless Framework Access Key.
+org: anful
 service: serverless-attendance-bot
-frameworkVersion: '3'
+frameworkVersion: '4'
 useDotenv: true
-custom:
+build:
   esbuild:
+
     bundle: true
     minify: false
-    sourcemap: true
-    exclude: ['@sparticuz/chromium']
+    sourcemap:
+      type: linked
+      # Whether to set the NODE_OPTIONS on functions to enable sourcemaps on Lambda
+      setNodeOptions: true
+    exclude: ['@sparticuz/chromium', 'aws-sdk']
     target: 'node18'
     define: { 'require.resolve': undefined }
     platform: 'node'
-    concurrency: 10
-    packager: 'yarn'
-    watch:
-      pattern: ['**/*.ts'] # match only typescript files in src directory
+    buildConcurrency: 10
+    packages: external
+
 provider:
   name: aws
   iam:
@@ -23,6 +28,7 @@ provider:
           Action:
             - 'secretsmanager:GetSecretValue'
           Resource: 'arn:aws:secretsmanager:${aws:region}:${aws:accountId}:secret:${env:SECRET_NAME}-*'
+
   stage: ${opt:stage, 'dev'}
   runtime: nodejs18.x
   region: ${opt:region, "ap-northeast-1"}
@@ -35,19 +41,36 @@ provider:
     STAGE: ${self:provider.stage}
   timeout: 30
   memorySize: 2048
+  tracing:
+    # Can only be true if API Gateway is inside a stack.
+    apiGateway: true
+    # Can be true (true equals 'Active'), 'Active' or 'PassThrough'
+    lambda: true
+
 functions:
   slack:
-    handler: app.handler
+    handler: src/app.handler
+    timeout: 28
     layers:
-      - arn:aws:lambda:${aws:region}:764866452798:layer:chrome-aws-lambda:39
+      - arn:aws:lambda:${aws:region}:764866452798:layer:chrome-aws-lambda:47
     events:
-      - http:
-          path: slack/events
-          method: post
+      - httpApi:
+          method: POST
+          path: /slack/events
+
+  checkPresence:
+    handler: src/app.checkPresence
+    layers:
+      - arn:aws:lambda:${aws:region}:764866452798:layer:chrome-aws-lambda:47
+    events:
+      - schedule:
+          rate: rate(1 minute)
+          enabled: true
+    # Add any environment variables specific to checkPresence if needed
 plugins:
-  - serverless-esbuild
   - serverless-dotenv-plugin
   - serverless-offline
+
 package:
   patterns:
     - '!yarn*'

@@ -1,8 +1,10 @@
 import { App, AwsLambdaReceiver } from '@slack/bolt'
 import 'dotenv/config'
-import { AttendanceUseCase } from './usecases/attendance'
-import { Attendance } from './controller/attendance'
-import { User } from './gateway/user'
+import { AttendanceUseCase } from 'usecases/attendance'
+import { Attendance } from 'controller/attendance'
+import { Presence } from 'controller/presence'
+import { User as gatewayUser } from 'gateway/user'
+import { User as usecasesUser } from 'usecases/user'
 import { AwsCallback, AwsEvent } from '@slack/bolt/dist/receivers/AwsLambdaReceiver'
 
 // Initialize your custom receiver
@@ -32,10 +34,11 @@ app.use(async args => {
 })
 
 // Instantiate the services
-const userPort = new User()
+const userPort = new gatewayUser()
 const attendancePort = new Attendance()
+const presencePort = new Presence()
 // Inject the services into the use case
-const attendanceUseCase = new AttendanceUseCase(userPort, attendancePort)
+const attendanceUseCase = new AttendanceUseCase(userPort, attendancePort, presencePort)
 
 // "in" を含むメッセージをリッスンします
 // thisを渡すためにbindを使う
@@ -56,8 +59,20 @@ app.message(
   async message_arg => await attendanceUseCase.attendance_from_slack(message_arg)
 )
 
+app.view('login_model', async context => await new usecasesUser(userPort).save_user_secret(context))
+
 // Lambda 関数のイベントを処理します
 module.exports.handler = async (event: AwsEvent, context: any, callback: AwsCallback) => {
+  const handler = await awsLambdaReceiver.start()
+  return handler(event, context, callback)
+}
+
+module.exports.checkPresence = async (event: AwsEvent, context: any, callback: AwsCallback) => {
+  await attendanceUseCase.set_emails()
+  await attendanceUseCase.on_change_presence_for_attendance(app)
+}
+
+module.exports.login = async (event: AwsEvent, context: any, callback: AwsCallback) => {
   const handler = await awsLambdaReceiver.start()
   return handler(event, context, callback)
 }

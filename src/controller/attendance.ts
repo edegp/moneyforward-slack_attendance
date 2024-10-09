@@ -1,6 +1,5 @@
-import { Port } from '../port'
-import { Chrome_browser } from '../driver/chrome_browser'
-import { Browser } from 'puppeteer-core'
+import { Chrome_browser } from 'driver/chrome_browser'
+import { Port } from 'port'
 
 export class Attendance implements Port.IAttendancePort {
   private async login(browser: Chrome_browser, email: string, password: string): Promise<void> {
@@ -15,12 +14,24 @@ export class Attendance implements Port.IAttendancePort {
       }
       const url = 'https://attendance.moneyforward.com' + path
       await browser.open(url)
+      // email入力
       await browser.wait_for_selector('input[type="email"]')
+      await browser.wait_for_selector('#submitto')
       await browser.type('input[type="email"]', email)
       await browser.click('#submitto')
-      await browser.wait_for_selector('input[type="password"]')
+      // password入力
+      await browser.wait_for_selector('input[type="password"][required]')
+      await browser.wait_for_selector('#submitto')
       await browser.type('input[type="password"]', password)
       await browser.click('#submitto')
+      await browser.wait_for_navigation()
+
+      if (browser.page.url().includes('sign_in')) {
+        console.warn('ログインに失敗しました')
+        await browser.open('https://attendance.moneyforward.com/my_page')
+      }
+
+      console.info('ログインしました')
     } catch (error: Error | any) {
       console.error(error)
       throw Error('ブラウザが開けませんでした')
@@ -31,8 +42,9 @@ export class Attendance implements Port.IAttendancePort {
     try {
       await browser.setup()
       await this.login(browser, email, password)
-      await browser.wait_for_selector('.clock_in button')
-      await browser.click('.clock_in button')
+      await browser.wait_for_selector('.clock_in > button')
+      await browser.click('.clock_in > button')
+      console.info('出勤しました')
     } catch (error: Error | any) {
       console.error(error)
       return Error(error.message)
@@ -45,13 +57,16 @@ export class Attendance implements Port.IAttendancePort {
     try {
       await browser.setup()
       await this.login(browser, email, password)
-      await browser.wait_for_selector('.clock_out button')
-      await browser.click('.clock_out button')
+      console.log(browser.page.url())
+      await browser.wait_for_selector('.clock_out > button')
+      await browser.click('.clock_out > button')
+      console.info('退勤しました')
     } catch (error: Error | any) {
       console.error(error)
       return Error(error.message)
     } finally {
       await browser.close()
+      console.info('ブラウザを閉じました')
     }
   }
   async start_break(email: string, password: string): Promise<void | Error> {
@@ -59,13 +74,15 @@ export class Attendance implements Port.IAttendancePort {
     try {
       await browser.setup()
       await this.login(browser, email, password)
-      await browser.wait_for_selector('.start_break button')
-      await browser.click('.start_break button')
+      await browser.wait_for_selector('.start_break > button')
+      await browser.click('.start_break > button')
+      console.info('休憩を開始しました')
     } catch (error: Error | any) {
       console.error(error)
       return Error(error.message)
     } finally {
       await browser.close()
+      console.info('ブラウザを閉じました')
     }
   }
   async end_break(email: string, password: string): Promise<void | Error> {
@@ -73,13 +90,15 @@ export class Attendance implements Port.IAttendancePort {
     try {
       await browser.setup()
       await this.login(browser, email, password)
-      await browser.wait_for_selector('.end_break button')
-      await browser.click('.end_break button')
+      await browser.wait_for_selector('.end_break > button')
+      await browser.click('.end_break > button')
+      console.info('休憩を終了しました')
     } catch (error: Error | any) {
       console.error(error)
       return Error(error.message)
     } finally {
       await browser.close()
+      console.info('ブラウザを閉じました')
     }
   }
 }
